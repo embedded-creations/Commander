@@ -1,22 +1,12 @@
 //All commands for 'master'
-//COMMAND ARRAY ------------------------------------------------------------------------------
-const commandList_t masterCommands[] = {
-  {"hello",      helloHandler, "Say hello"},
-  {"get",        getHandler,   "call get commands"},
-  {"set",        setHandler,   "call set commands"},
-};
- /*
-  * This needs to be passed to the commander object so it knows how big the array of commands is, but this happens earlier in setup().
-  * This has already been forward declared before setup() so the compiler knows it exists
-  */
+
 /* Command handler template
 bool myFunc(Commander &Cmdr){
   //put your command handler code here
   return 0;
 }
 */
-//initialise the numOfMasterCmds variable after creating the masterCommands[] array - numOfMasterCmds now indicates the length of the array
-const uint16_t numOfMasterCmds = sizeof(masterCommands);
+CommandCollection masterCollection;
 
 //These are the command handlers, there needs to be one for each command in the command array myCommands[]
 //The command array can have multiple commands strings that all call the same function
@@ -36,9 +26,9 @@ bool getHandler(Commander &Cmdr){
   //get must impliment its own function to return control, for exampe an 'exit' command.
   Cmdr.println("Passing control to get command handler");
   //Cmdr.attachCommands(getCommands, numOfGetCmds);
-  if(Cmdr.transferTo(getCommands, numOfGetCmds, "get")){
+  if(Cmdr.transferTo(getCollection, "get")){
     //commander returns true if it is passing back control;
-    Cmdr.transferBack(masterCommands, numOfMasterCmds, "Cmd");
+    Cmdr.transferBack(masterCollection, "Cmd");
   }
 
   //if(Cmdr.hasPayload()){
@@ -58,10 +48,17 @@ bool setHandler(Commander &Cmdr){
   //set must impliment its own function to return control, for exampe an 'exit' command.
   bool retVal = 0;
   Cmdr.println("Passing to set command handler");
-  if(Cmdr.transferTo(setCommands, numOfSetCmds, "set")){
+  if(Cmdr.transferTo(setCollection, "set")){
     //Cmdr.commanderName = "set";
     //commander returns true if it is passing back control;
-    Cmdr.transferBack(masterCommands, numOfMasterCmds, "Cmd");
+    Cmdr.transferBack(masterCollection, "Cmd");
   }
   return 0;
 }
+
+//COMMAND ARRAY ------------------------------------------------------------------------------
+const commandList_t masterCommands[] = {
+  {"hello",      helloHandler, "Say hello"},
+  {"get",        getHandler,   "call get commands"},
+  {"set",        setHandler,   "call set commands"},
+};

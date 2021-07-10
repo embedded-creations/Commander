@@ -34,6 +34,14 @@ typedef struct commandList_t{
 	char* manualString;
 } commandList_t;
 
+class CommandCollection {
+  public:
+    const commandList_t *listPtr;
+    size_t numCmds;
+    // TODO: add prompt?
+    void setList(const commandList_t *listPtr, size_t numCmds) {this->listPtr = listPtr; this->numCmds = numCmds;}
+};
+
 extern const commandList_t myCommands[];
 	
 typedef union {
@@ -196,6 +204,8 @@ public:
 	Commander&   	transfer(Commander& Cmdr);
 	bool   				transferTo(const commandList_t *commands, uint32_t size, String newName);
 	Commander&   	transferBack(const commandList_t *commands, uint32_t size, String newName);
+	bool   				transferTo(CommandCollection &collection, String newName);
+	Commander&   	transferBack(CommandCollection &collection, String newName);
 	Commander&   	attachOutputPort(Stream *oPort)							{ports.outPort = oPort; return *this;}
 	Stream* 			getOutputPort() 														{return ports.outPort;}
 	Commander&   	attachAltPort(Stream *aPort)								{ports.altPort = aPort; return *this;} 

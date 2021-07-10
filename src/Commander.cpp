@@ -286,10 +286,20 @@ bool Commander::transferTo(const commandList_t *commands, uint32_t size, String 
 	return false;
 }
 //==============================================================================================================
-
+bool Commander::transferTo(CommandCollection &collection, String newName){
+	return transferTo(collection.listPtr, collection.numCmds, newName);
+}
+//==============================================================================================================
 Commander& Commander::transferBack(const commandList_t *commands, uint32_t size, String newName){
 	//Transfer command to the new command array
 	attachCommands(commands, size);
+	commanderName = newName;
+	return *this;
+}
+//==============================================================================================================
+Commander& Commander::transferBack(CommandCollection &collection, String newName){
+	//Transfer command to the new command array
+	attachCommands(collection.listPtr, collection.numCmds);
 	commanderName = newName;
 	return *this;
 }

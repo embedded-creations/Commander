@@ -8,22 +8,24 @@
  * For example, 'get' will transfer control to the 'get' command set. 'help' will then call the help function for the 'get' commands.
  */
 #include <Commander.h>
-extern const uint16_t numOfMasterCmds; //This is a forward declarationso the compiler knows we are going to declare this variable properly later
-extern const uint16_t numOfGetCmds; //This is a forward declaration so the compiler knows we are going to declare this variable properly later
-extern const uint16_t numOfSetCmds; //This is a forward declaration so the compiler knows we are going to declare this variable properly later
-extern const commandList_t masterCommands[]; //forward declare the master command list
-extern const commandList_t getCommands[]; //forward declare the get command list
-extern const commandList_t setCommands[]; //forward declare the set command list
+
 //portSettings_t savedSettings;
 Commander cmd;
 //Variables we can set or get
 int myInt = 0;
 float myFloat = 0.0;
 
+// include header files with commands after declaring any variables used by the commands
+#include "getCommands.h"
+#include "setCommands.h"
+#include "masterCommands.h"
 //SETUP ---------------------------------------------------------------------------
 void setup() {
   Serial.begin(115200);
-  cmd.begin(&Serial, masterCommands, numOfMasterCmds);
+  masterCollection.setList(masterCommands, sizeof(masterCommands));
+  setCollection.setList(setCommands, sizeof(setCommands));
+  getCollection.setList(getCommands, sizeof(getCommands));
+  cmd.begin(&Serial, masterCollection.listPtr, masterCollection.numCmds);
   cmd.commanderName = "Cmd";
   cmd.commandPrompt(ON);
   cmd.echo(true);

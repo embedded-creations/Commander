@@ -272,6 +272,9 @@ bool Commander::transferTo(const commandList_t *commands, uint32_t size, String 
 	//Transfer command to the new command array
 	attachCommands(commands, size);
 	commanderName = newName;
+	// TODO: this isn't an ideal way to verify that transferTo(collection) was called instead of transferTo(commands, size, name())
+	if(!commandCollection || (commands != commandCollection->listPtr) || (newName != commandCollection->name))
+		commandCollection = NULL;
 	if( hasPayload() ){
     //Serial.println("handing payload to get command list");
 		//bufferString = bufferString.substring(Cmdr.endIndexOfLastCommand+1);
@@ -286,21 +289,24 @@ bool Commander::transferTo(const commandList_t *commands, uint32_t size, String 
 	return false;
 }
 //==============================================================================================================
-bool Commander::transferTo(CommandCollection &collection, String newName){
-	return transferTo(collection.listPtr, collection.numCmds, newName);
+bool Commander::transferTo(CommandCollection &collection){
+	commandCollection = &collection;
+	return transferTo(collection.listPtr, collection.numCmds, collection.name);
 }
 //==============================================================================================================
 Commander& Commander::transferBack(const commandList_t *commands, uint32_t size, String newName){
 	//Transfer command to the new command array
 	attachCommands(commands, size);
 	commanderName = newName;
+	commandCollection = NULL;
 	return *this;
 }
 //==============================================================================================================
-Commander& Commander::transferBack(CommandCollection &collection, String newName){
+Commander& Commander::transferBack(CommandCollection &collection){
 	//Transfer command to the new command array
 	attachCommands(collection.listPtr, collection.numCmds);
-	commanderName = newName;
+	commanderName = collection.name;
+	commandCollection = &collection;
 	return *this;
 }
 //==============================================================================================================

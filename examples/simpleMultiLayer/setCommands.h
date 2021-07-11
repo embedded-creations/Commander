@@ -6,47 +6,70 @@ bool myFunc(Commander &Cmdr){
   return 0;
 }
 */
-CommandCollection setCollection;
+
 extern CommandCollection masterCollection;
 
+class SetCollection : public CommandCollection {
+  public:
+    SetCollection(int setNumber) {this->setNumber = setNumber;}
 
-//COMMAND HANDLERS ---------------------------------------------------------------------------
+    //COMMAND ARRAY ------------------------------------------------------------------------------
 
-bool setHelloHandler(Commander &Cmdr){
-  Cmdr.print("Hello! this is ");
-  Cmdr.println(Cmdr.commanderName);
-  return 0;
-}
+    const commandList_t setCommands[4] = {
+      {"hello",    setHelloHandler, "Say hello"},
+      {"int",      setIntVariable,     "set my int variable"},
+      {"float",    setfloatVariable,     "set my float variable"},
+      {"exit",     exitSet,         "Exit sub command mode"},
+    };
 
-bool setIntVariable(Commander &Cmdr){
-  
-  if(Cmdr.getInt(myInt)){
-    Cmdr.print("Setting my int to ");
-    Cmdr.println(myInt);
-  }else Cmdr.println("Error");
-  return 0;
-}
+    //COMMAND HANDLERS ---------------------------------------------------------------------------
 
-bool setfloatVariable(Commander &Cmdr){
-  if(Cmdr.getFloat(myFloat)){
-    Cmdr.print("Setting my float to ");
-    Cmdr.println(myFloat);
-  }else Cmdr.println("Error");
-  return 0;
-}
+    void printSetNumber(Commander &Cmdr) {
+      Cmdr.print("My setNumber is ");
+      Cmdr.println(setNumber);
+    }
 
-bool exitSet(Commander &Cmdr){
-  //had over control to the sub commander
-  Cmdr.println("Passing control back to main command handler");
-  //transfer back to the master command list
-  Cmdr.transferBack(masterCollection, "Cmd");
-  return 0;
-}
+    static bool setHelloHandler(Commander &Cmdr){
+      Cmdr.print("Hello! this is ");
+      Cmdr.println(Cmdr.commanderName);
 
-//COMMAND ARRAY ------------------------------------------------------------------------------
-const commandList_t setCommands[] = {
-  {"hello",    setHelloHandler, "Say hello"},
-  {"int",      setIntVariable,     "set my int variable"},
-  {"float",    setfloatVariable,     "set my float variable"},
-  {"exit",     exitSet,         "Exit sub command mode"},
+      SetCollection * scPtr = (SetCollection *)Cmdr.getCommandCollection();
+      if(scPtr)
+        scPtr->printSetNumber(Cmdr);
+      else
+        Cmdr.println("Couldn't getCommandCollection()");
+      
+      return 0;
+    }
+
+    static bool setIntVariable(Commander &Cmdr){
+      if(Cmdr.getInt(myInt)){
+        Cmdr.print("Setting my int to ");
+        Cmdr.println(myInt);
+      }else Cmdr.println("Error");
+      return 0;
+    }
+
+    static bool setfloatVariable(Commander &Cmdr){
+      if(Cmdr.getFloat(myFloat)){
+        Cmdr.print("Setting my float to ");
+        Cmdr.println(myFloat);
+      }else Cmdr.println("Error");
+      return 0;
+    }
+
+    static bool exitSet(Commander &Cmdr){
+      //had over control to the sub commander
+      Cmdr.println("Passing control back to main command handler");
+      //transfer back to the master command list
+      Cmdr.transferBack(masterCollection);
+      return 0;
+    }
+
+  private:
+    int setNumber;
 };
+
+SetCollection mySetCollection(1);
+SetCollection mySetCollection2(2);
+

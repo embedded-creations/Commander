@@ -22,9 +22,12 @@ float myFloat = 0.0;
 //SETUP ---------------------------------------------------------------------------
 void setup() {
   Serial.begin(115200);
-  masterCollection.setList(masterCommands, sizeof(masterCommands));
-  setCollection.setList(setCommands, sizeof(setCommands));
-  getCollection.setList(getCommands, sizeof(getCommands));
+
+  masterCollection.setList(masterCommands, sizeof(masterCommands), "Cmd");
+  mySetCollection.setList(mySetCollection.setCommands, sizeof(mySetCollection.setCommands), "set");
+  mySetCollection2.setList(mySetCollection2.setCommands, sizeof(mySetCollection2.setCommands), "set2");
+  getCollection.setList(getCommands, sizeof(getCommands), "get");
+
   cmd.begin(&Serial, masterCollection.listPtr, masterCollection.numCmds);
   cmd.commanderName = "Cmd";
   cmd.commandPrompt(ON);

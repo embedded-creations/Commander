@@ -34,7 +34,7 @@ bool exitGet(Commander &Cmdr){
   //had over control to the sub commander
   Cmdr.println("Passing control back to main command handler");
   //transfer back to the master command list
-  Cmdr.transferBack(masterCollection, "Cmd");
+  Cmdr.transferBack(masterCollection);
   return 0;
 }
 

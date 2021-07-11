@@ -38,8 +38,12 @@ class CommandCollection {
   public:
     const commandList_t *listPtr;
     size_t numCmds;
-    // TODO: add prompt?
-    void setList(const commandList_t *listPtr, size_t numCmds) {this->listPtr = listPtr; this->numCmds = numCmds;}
+    String name = "";
+    void setList(const commandList_t *listPtr, size_t numCmds, String name = "") {
+    	this->listPtr = listPtr;
+    	this->numCmds = numCmds;
+    	this->name = name;
+    }
 };
 
 extern const commandList_t myCommands[];
@@ -204,8 +208,8 @@ public:
 	Commander&   	transfer(Commander& Cmdr);
 	bool   				transferTo(const commandList_t *commands, uint32_t size, String newName);
 	Commander&   	transferBack(const commandList_t *commands, uint32_t size, String newName);
-	bool   				transferTo(CommandCollection &collection, String newName);
-	Commander&   	transferBack(CommandCollection &collection, String newName);
+	bool   				transferTo(CommandCollection &collection);
+	Commander&   	transferBack(CommandCollection &collection);
 	Commander&   	attachOutputPort(Stream *oPort)							{ports.outPort = oPort; return *this;}
 	Stream* 			getOutputPort() 														{return ports.outPort;}
 	Commander&   	attachAltPort(Stream *aPort)								{ports.altPort = aPort; return *this;} 
@@ -455,6 +459,7 @@ public:
 	uint8_t countItems(); //Returns the number of items in the payload. An item is any string with a space or delimiterChar at each end (or the end of line)
 	uint16_t getCommandListLength() {return commandListEntries;} //returns the number of commands
 	const commandList_t* getCommandList() {return commandList;}
+	CommandCollection* getCommandCollection() {return commandCollection;}
 	String 	getCommandItem(uint16_t commandItem); //returns a String containing the specified command and help text
 	uint8_t getInternalCommandLength() {return INTERNAL_COMMAND_ITEMS;}
 	String getInternalCommandItem(uint8_t internalItem);
@@ -531,6 +536,7 @@ private:
 	String prefixString = "";
 	String postfixString = "";
 	const commandList_t* commandList;
+	CommandCollection* commandCollection;
 	uint8_t commandListEntries = 0;
   cmdHandler customHandler;
   cmdHandler defaultHandler;

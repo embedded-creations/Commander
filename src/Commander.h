@@ -88,7 +88,7 @@ typedef union {
 		uint32_t printInternalCommands:1;		//8 enable printing of internal commands with help
 		uint32_t multiCommanderMode:1; 			//9 set to true when using multiple commander objects for multilayerd commands. Prevents multiple command prompts from appearing
 		uint32_t printComments:1; 					//10 set to true and lines prefixed with the comment char will print to the out and alt ports
-		uint32_t dataStreamMode:1;					//11 indicates the stream mode. mode 0 looks for an end of line, 1 is pure stream mode and cannot be terminated using a command char.
+		uint32_t dataStreamMode:1;					//11 indicates the stream mode. mode 0 looks for an EOF, 1 is pure stream mode and cannot be terminated using a command char.
 		uint32_t useHardLock:1; 						//12 use hard or soft lock (0 or 1)
 		uint32_t locked:1; 									//13 Indicates if Commander is in a locked or unlocked state
 		uint32_t stripCR:1; 								//14 Strip carriage returns from the buffer
@@ -98,6 +98,7 @@ typedef union {
 		uint32_t autoChain:1; 							//19 Automatically chain commands, and to hell with the consequences
 		uint32_t autoChainSurpressErrors:1;	//20 Prevent error messages when chaining commands
 		uint32_t ignoreQuotes:1;						//21 don't treat items in quotes as special
+		uint32_t dataStreamMethod:1;				//22 0: use bufferString, 1: use loopbackStream
   } bit;        // used for bit  access  
   uint32_t reg;  //used for register access 
 } cmdSettings_t; 
@@ -204,6 +205,8 @@ public:
 	bool 	 				isStreaming() 													{return commandState.bit.dataStreamOn;}
 	Commander& 	 	setStreamingMode(bool dataStreamMode) 	{ports.settings.bit.dataStreamMode = dataStreamMode; return *this;}
 	bool 	 				getStreamingMode() 													{return ports.settings.bit.dataStreamMode;}
+	Commander& 	 	setStreamingMethod(bool dataStreamMethod) 	{ports.settings.bit.dataStreamMethod = dataStreamMethod; return *this;}
+	bool 	 				getStreamingMethod() 												{return ports.settings.bit.dataStreamMethod;}
 	Commander&   	transfer(Commander& Cmdr);
 	bool   				transferTo(const commandList_t *commands, uint32_t size, String newName);
 	Commander&   	transferBack(const commandList_t *commands, uint32_t size, String newName);

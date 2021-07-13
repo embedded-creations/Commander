@@ -149,7 +149,10 @@ bool Commander::streamData(){
 		echoPorts(inByte);
 		//call the handler if you fill the buffer, then return so everything is reset
 		if(bytesWritten == bufferSize-1 || !ports.inPort->available()) {
-			
+			// dataStreamMethod==1 doesn't call handleCustomCommand(), and keeps bufferString intact between update() calls
+			if(ports.settings.bit.dataStreamMethod) 
+				return (bool)ports.inPort->available(); //return true if any bytes left to read
+
 			//println("Buffer ready, calling handler");
 			commandState.bit.commandHandled = !handleCustomCommand();
 			

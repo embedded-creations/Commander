@@ -172,7 +172,7 @@ const String unlockMessage = "Unlocked";
 const char EOFChar = 4; //end of file character for terminal
 
 //Commander Class ===========================================================================================
-class Commander{
+class Commander : public Stream {
 public:
 	Commander();
 	Commander(uint16_t reservedBuffer);
@@ -197,7 +197,6 @@ public:
 	bool   				feedString(String newString);
 	Commander&   	loadString(String newString);
 	Commander&   	setPending(bool pState)									{commandState.bit.isCommandPending = pState; return *this;} //sets the pending command bit - used if manually writing to the buffer
-	Commander&	 	write(uint8_t character) 								{bufferString += character; return *this;}
 	bool 	 				endLine();
 	Commander& 	 	startStreaming() 												{commandState.bit.dataStreamOn = true; return *this;} //set the streaming function ON
 	Commander& 	 	stopStreaming() 												{commandState.bit.dataStreamOn = false; return *this;} //set the streaming function OFF
@@ -237,99 +236,40 @@ public:
 	Commander&  	quickGet(String cmd, double var);
 	Commander& 	 	quickGet(String cmd, String str);
 	
-	size_t println() {
+	size_t write(uint8_t b) {
 		yield();
-		if( ports.settings.bit.copyResponseToAlt ) printAltln();
-		yield();
-		if(ports.outPort){ 
-			return ports.outPort->println(); 
-		}
-		return 0;
-	}
-	//Template functions for print, println and write
-	template <class printType>
-	size_t print(printType printableVariable){
-		yield();
-		if( ports.settings.bit.copyResponseToAlt ) printAlt(printableVariable);
-		yield();
-		if(ports.outPort){
-			doPrefix();
-			return ports.outPort->print(printableVariable); 
-		}
-		return 0;
-	}
-	
-	template <class printType>
-	size_t print(printType printableVariable, int fmt){
-		yield();
-		if( ports.settings.bit.copyResponseToAlt ) printAlt(printableVariable, fmt);
-		yield();
-		if(ports.outPort){ 
-			doPrefix();
-			return ports.outPort->print(printableVariable, fmt); 
-		}
-		return 0;
-	}
-	
-	template <class printType>
-	size_t println(printType printableVariable){
-		yield();
-		if( ports.settings.bit.copyResponseToAlt ) printAltln(printableVariable);
-		yield();
-		if(ports.outPort){
-				doPrefixln();
-				if(commandState.bit.postfixMessage){
-					ports.outPort->print(printableVariable); 
-					return ports.outPort->println(postfixString);
-				}
-			return ports.outPort->println(printableVariable); 
-		}
-		return 0;
-	}
-	
-	template <class printType>
-	size_t println(printType printableVariable, int fmt){
-		yield();
-		if( ports.settings.bit.copyResponseToAlt ) printAltln(printableVariable, fmt);
-		yield();
-		if(ports.outPort){ 
-				doPrefixln();
-				if(commandState.bit.postfixMessage){
-					ports.outPort->print(printableVariable, fmt); 
-					return ports.outPort->println(postfixString);
-				}
-			return ports.outPort->println(printableVariable, fmt); 
-		}
-		return 0;
-	}
-	
-	template <class printType>
-	size_t write(printType printableVariable)	{ 
-		yield();
-		if( ports.settings.bit.copyResponseToAlt ) writeAlt(printableVariable);
+		if( ports.settings.bit.copyResponseToAlt ) writeAlt(b);
 		yield();
 		if(ports.outPort){ 
 				doPrefix();
-				if(isNewline(printableVariable)) ports.outPort->print(postfixString);
-			return ports.outPort->write(printableVariable); 
+				if(isNewline(b)) ports.outPort->print(postfixString);
+			return ports.outPort->write(b); 
 		}
 		return 0;
 	}
-	
-	template <class printType>
-	size_t write(printType printableVariable, int length)	{ 
-		yield();
-		if( ports.settings.bit.copyResponseToAlt ) writeAlt(printableVariable, length);
-		yield();
-		if(ports.outPort){ 
-				doPrefix();
-				if(isNewline(printableVariable)) ports.outPort->print(postfixString);
-			return ports.outPort->write(printableVariable, length); 
-		}
-		return 0;
+
+	int available() { return bufferString.length(); }
+
+	int read() {
+		if(!bufferString.length())
+			return -1;
+		char retchar = bufferString.charAt(0);
+		bufferString.remove(0, 1);
+		return retchar;
 	}
-	
-	
+
+	int peek() {
+		if(!bufferString.length())
+			return -1;
+		return bufferString.charAt(0);
+	}
+
+	int availableForWrite() { if(ports.outPort) return ports.outPort->availableForWrite(); }
+
+	void flush() { if(ports.outPort) ports.outPort->flush(); }
+
+	using Print::write; // pull in write(String) and write(buf, size) from Print
+
 	Commander& setPrefix(String prfx){
 		prefixString = prfx;
 		commandState.bit.prefixMessage = true;

@@ -46,6 +46,34 @@ class CommandCollection {
     }
 };
 
+/* CC_METHOD: wrapper to simplify creating static and non-static member functions in CommandCollection derived class, and automatically calling non-static from static
+ *
+ * Example usage:
+ *   CC_METHOD(FileNavigator, testMethod, Cmdr) {
+ *     Cmdr.print(this->name); // this line wouldn't work in a static method
+ *     return 0;
+ *   }
+ *
+ * Produces this code:
+ *   static bool FileNavigator(Commander &Cmdr) {
+ *     return Cmdr.getCommandCollection() ? ((FileNavigator*)Cmdr.getCommandCollection())->testMethod_ns(Cmdr) : 1;
+ *   }
+ *
+ *   bool testMethod_ns(Commander &Cmdr) {
+ *     Cmdr.print(this->name); // this line wouldn't work in a static method
+ *     return 0;
+ *   }
+ */
+// TODO: add custom error message through new Commander method?
+// TODO: replace "commandername" with something less ambiguous (commanderName already exists)
+#define NAME2_PREFIX(prefix,fun) prefix ## fun
+#define NAME1_PREFIX(prefix,fun) NAME2_PREFIX(prefix,fun)
+#define CC_METHOD(classname, functionname, commandername) \
+    static bool functionname(Commander &commandername) { \
+      return commandername.getCommandCollection() ? ((classname*)commandername.getCommandCollection())->NAME1_PREFIX(functionname,_ns)(commandername) : 1; \
+    } \
+    bool NAME1_PREFIX(functionname,_ns)(Commander &commandername)
+
 extern const commandList_t myCommands[];
 	
 typedef union {

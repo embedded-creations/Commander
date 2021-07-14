@@ -24,21 +24,14 @@ class SetCollection : public CommandCollection {
 
     //COMMAND HANDLERS ---------------------------------------------------------------------------
 
-    void printSetNumber(Commander &Cmdr) {
-      Cmdr.print("My setNumber is ");
-      Cmdr.println(setNumber);
-    }
-
-    static bool setHelloHandler(Commander &Cmdr){
+    // this method uses setNumber which is non-static, and so CC_METHOD wrapper must be used
+    CC_METHOD(SetCollection, setHelloHandler, Cmdr) {
       Cmdr.print("Hello! this is ");
       Cmdr.println(Cmdr.commanderName);
 
-      SetCollection * scPtr = (SetCollection *)Cmdr.getCommandCollection();
-      if(scPtr)
-        scPtr->printSetNumber(Cmdr);
-      else
-        Cmdr.println("Couldn't getCommandCollection()");
-      
+      Cmdr.print("My setNumber is ");
+      Cmdr.println(setNumber);
+
       return 0;
     }
 

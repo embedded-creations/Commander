@@ -295,7 +295,7 @@ public:
 		return bufferString.charAt(0);
 	}
 
-	int availableForWrite() { if(ports.outPort) return ports.outPort->availableForWrite(); }
+	int availableForWrite() { return ports.outPort ? ports.outPort->availableForWrite() : 0; }
 
 	void flush() { if(ports.outPort) ports.outPort->flush(); }
 

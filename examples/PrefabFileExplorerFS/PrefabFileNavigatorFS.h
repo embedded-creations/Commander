@@ -48,8 +48,8 @@ class FileNavigator : public CommandCollection {
       return 0;
     }
 
-    const commandList_t fileCommands[6] = {
-      //{"mkdir", makeDirectory, "make a sub directory"},
+    const commandList_t fileCommands[7] = {
+      {"mkdir", makeDirectory, "make a sub directory"},
       {"cd", changeDirectory, "Change directory - use / for root"},
       {"ls", printDirectory, "Print directory"},
       //{"remove", removeFile, "Delete a file"},
@@ -195,6 +195,29 @@ class FileNavigator : public CommandCollection {
       Cmdr.transferBack(*topLayer);
       return 0;
     }
+
+    CC_METHOD(FileNavigator, makeDirectory, Cmdr) {
+      if(!filesystemOK)  return noFsError(Cmdr);
+
+      char pathname[128+1];
+
+      String dirString = Cmdr.getPayloadString(); // This works in one line without intermediate String on Teensy, but not on ESP32
+      const char * dirname = dirString.c_str();
+
+      if (make_full_pathname(Cmdr, dirname, pathname, sizeof(pathname)) != 0) return 0;
+
+      if (!fsptr->exists(pathname)) {
+        // Use mkdir to create directory (note you should _not_ have a trailing slash).
+        if (!fsptr->mkdir(pathname)) {
+          Cmdr.println("Error, failed to create directory!");
+        } else {
+          Cmdr.print("Created: ");
+          Cmdr.println(Cmdr.getPayloadString());   
+        }
+      }
+      return 0;
+    }
+
 
     int make_full_pathname(Commander &Cmdr, const char *name, char *pathname, size_t pathname_len)
     {

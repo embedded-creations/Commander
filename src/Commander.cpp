@@ -674,6 +674,7 @@ uint8_t Commander::getLength(uint8_t indx){
 		if(commandList[indx].commandString[n] != NULL) length++;
 		else return length;
 	}
+	return length;
 }
 //==============================================================================================================
 bool Commander::handleCommand(){

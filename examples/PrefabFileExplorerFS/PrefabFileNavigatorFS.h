@@ -84,15 +84,17 @@ class FileNavigator : public CommandCollection {
 
     CC_METHOD(FileNavigator, readFileContents, Cmdr) {
       char pathname[128+1];
-      const char * filename = Cmdr.getPayloadString().c_str();
 
+      String fileString = Cmdr.getPayloadString(); // This works in one line without intermediate String on Teensy, but not on ESP32
+      const char * filename = fileString.c_str();
 
-      if (make_full_pathname(Cmdr, filename, pathname, sizeof(pathname)) != 0) return;
       if(!filesystemOK)  return noFsError(Cmdr);
+
+      if (make_full_pathname(Cmdr, filename, pathname, sizeof(pathname)) != 0) return 0;
       File readFile = fsptr->open(pathname, FILE_READ);
       if (!readFile) {
         Cmdr.println("Error, failed to open file for reading!");
-        return;
+        return 0;
       }
       readFile.setTimeout(0);
       while (readFile.available()) {
@@ -106,13 +108,16 @@ class FileNavigator : public CommandCollection {
         }
       }
       Cmdr.println();
-
+      return 0;
     }
 
     bool changeDirectoryFS(Commander &Cmdr) {
       char pathname[128+1];
       bool returnVal = false;
-      const char * dirname = Cmdr.getPayloadString().c_str();
+
+      String dirString = Cmdr.getPayloadString(); // This works in one line without intermediate dirString on Teensy, but not on ESP32
+      const char * dirname = dirString.c_str();
+
 
       if (make_full_pathname(Cmdr, dirname, pathname, sizeof(pathname)) != 0)
         return false;
@@ -154,12 +159,12 @@ class FileNavigator : public CommandCollection {
       File dir = fsptr->open(cwd);
       if (!dir) {
         Cmdr.println("Directory open failed");
-        return;
+        return 0;
       }
       if (!dir.isDirectory()) {
         Cmdr.println("Not directory");
         dir.close();
-        return;
+        return 0;
       }
       File child = dir.openNextFile();
       while (child) {
@@ -201,16 +206,14 @@ class FileNavigator : public CommandCollection {
       if (*name == '/') {
         strncpy(pathname, name, pathname_len);
         pathname[pathname_len-1] = '\0';
-      }
-      else {
+      } else {
         strcpy(pathname, cwd);
         if (cwd[strlen(cwd)-1] == '/') {
           if (strlen(cwd) + strlen(name) >= pathname_len) {
             Cmdr.println("pathname too long");
             return -2;
           }
-        }
-        else {
+        } else {
           if (strlen(cwd) + 1 + strlen(name) >= pathname_len) {
             Cmdr.println("pathname too long");
             return -2;

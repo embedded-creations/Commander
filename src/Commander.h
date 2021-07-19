@@ -9,6 +9,13 @@
 
 class Commander;
 
+
+//const String CommanderVersionNumber = "3.0.0";
+const uint8_t majorVersion = 4;
+const uint8_t minorVersion = 2;
+const uint8_t subVersion   = 0;
+
+
 //#define BENCHMARKING_ON
 
 #define DEBUG_INDEXER false
@@ -74,7 +81,7 @@ class CommandCollection {
     } \
     bool NAME1_PREFIX(functionname,_ns)(Commander &commandername)
 
-extern const commandList_t myCommands[];
+//extern const commandList_t myCommands[];
 	
 typedef union {
   struct {
@@ -133,10 +140,7 @@ typedef union {
 //Settings register:
 //							31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
 //default is 	0b 0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1  0  0  0  1  0  1  1  1  0  1  1  0  0  0
-//const String CommanderVersionNumber = "3.0.0";
-const uint8_t majorVersion = 4;
-const uint8_t minorVersion = 1;
-const uint8_t subVersion   = 1;
+
 
 typedef enum streamType_t{
 	UNDEFINED_STREAM 	= 0,
@@ -214,6 +218,7 @@ public:
 	Commander&   printPassPhrase() 							{print(*passPhrase); return *this;}
 	Commander&	 setUserString(String& str) 		{userString = &str; return *this;}
 	Commander&   printUserString() 							{print(*userString); return *this;}
+	Commander&	 setExtraHelp(char* ptr[])				{extraHelp = ptr; return *this;}
 	Commander& 	 lock() 												{ports.settings.bit.locked = true; return *this;}
 	Commander& 	 unlock() 											{ports.settings.bit.locked = false; return *this;}
 	Commander& 	 setLockType(bool hlState) 			{ports.settings.bit.useHardLock = hlState; return *this;}
@@ -226,6 +231,7 @@ public:
 	bool   				feedString(String newString);
 	Commander&   	loadString(String newString);
 	Commander&   	setPending(bool pState)									{commandState.bit.isCommandPending = pState; return *this;} //sets the pending command bit - used if manually writing to the buffer
+	Commander&	 	add(uint8_t character) 								{bufferString += character; return *this;}
 	bool 	 				endLine();
 	Commander& 	 	startStreaming() 												{commandState.bit.dataStreamOn = true; return *this;} //set the streaming function ON
 	Commander& 	 	stopStreaming() 												{commandState.bit.dataStreamOn = false; return *this;} //set the streaming function OFF
@@ -253,8 +259,11 @@ public:
 	Commander& 	 	attachDefaultHandler(cmdHandler handler) 	{defaultHandler = handler; return *this;}
 	Commander&   	setBuffer(uint16_t buffSize);
 	Commander&  	attachCommands(const commandList_t *commands, uint32_t size);
+	Commander&  	attachCommandArray(const commandList_t *commands, uint32_t length);
 	Commander&   	setStreamType(streamType_t newType) 			{ports.settings.bit.streamType = (uint16_t)newType; return *this;}
 	streamType_t 	getStreamType() 													{return (streamType_t)ports.settings.bit.streamType;}
+	
+	Commander&   reloadCommands() 											  	{computeLengths(); return *this;}
 	
 	int 	 				quick(String cmd);
 	Commander& 	 	quickSetHelp();
@@ -266,7 +275,7 @@ public:
 	Commander&   	quickGet(String cmd, float var);
 	Commander&  	quickGet(String cmd, double var);
 	Commander& 	 	quickGet(String cmd, String str);
-	
+		
 	size_t write(uint8_t b) {
 		yield();
 		if( ports.settings.bit.copyResponseToAlt ) writeAlt(b);
@@ -520,6 +529,7 @@ private:
   int16_t commandIndex = -1;
 	uint8_t* commandLengths;
 	uint8_t endIndexOfLastCommand = 0;
+	char** extraHelp;
 	uint8_t longestCommand = 0;
 	char commentCharacter = '#'; //marks a line as a comment - ignored by the command parser
 	char reloadCommandCharacter = '/'; //send this character to automatically reprocess the old buffer - same as resending the last command from the users POV.	

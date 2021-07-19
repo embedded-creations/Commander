@@ -57,19 +57,19 @@ class FileNavigator : public CommandCollection {
       //{"rename", renameFile, "rename a file or sub directory"},
       {"read", readFileContents, "Read file and send to terminal"},
       //{"write", writeToFileHandler, "Create file and open for writing - Send ASCII code 0x04 to terminate"},
-      {"status", noCardError, "check card status"},
+      {"status", noFsError, "check filesystem status"},
       {"rb", receiveYmodem, "Start YMODEM Batch Receive"},
       {"exit", exitHandler, "Exit sub command"}
     };
 
-    CC_METHOD(FileNavigator, noCardError, Cmdr) {
-      if(!filesystemOK) Cmdr.println("ERR: No SD Card");
-      else  Cmdr.println("Card detected");
+    CC_METHOD(FileNavigator, noFsError, Cmdr) {
+      if(!filesystemOK) Cmdr.println("ERR: No Filesystem Mounted");
+      else  Cmdr.println("Filesystem Mounted");
       return 0;
     }
 
     CC_METHOD(FileNavigator, receiveYmodem, Cmdr) {
-      if(!filesystemOK)  return noCardError(Cmdr);
+      if(!filesystemOK)  return noFsError(Cmdr);
 
       Cmdr.attachSpecialHandler(receiveYmodemLoop);
       // TODO: clear buffer before streaming?
@@ -86,9 +86,9 @@ class FileNavigator : public CommandCollection {
       char pathname[128+1];
       const char * filename = Cmdr.getPayloadString().c_str();
 
-      if(!filesystemOK)  return noCardError(Cmdr);
 
       if (make_full_pathname(Cmdr, filename, pathname, sizeof(pathname)) != 0) return;
+      if(!filesystemOK)  return noFsError(Cmdr);
       File readFile = fsptr->open(pathname, FILE_READ);
       if (!readFile) {
         Cmdr.println("Error, failed to open file for reading!");
@@ -134,7 +134,7 @@ class FileNavigator : public CommandCollection {
     }
 
     CC_METHOD(FileNavigator, changeDirectory, Cmdr) {
-      if(!filesystemOK)  return noCardError(Cmdr);
+      if(!filesystemOK)  return noFsError(Cmdr);
 
       if(changeDirectoryFS(Cmdr)) {
         Cmdr.print("In: ");
@@ -149,7 +149,7 @@ class FileNavigator : public CommandCollection {
     }
 
     CC_METHOD(FileNavigator, printDirectory, Cmdr) {
-      if(!filesystemOK)  return noCardError(Cmdr);
+      if(!filesystemOK)  return noFsError(Cmdr);
 
       File dir = fsptr->open(cwd);
       if (!dir) {
@@ -249,7 +249,7 @@ class FileNavigator : public CommandCollection {
 //These are the command handlers, there needs to be one for each command in the command array myCommands[]
 //The command array can have multiple commands strings that all call the same function
 bool makeDirectory(Commander &Cmdr){
-  if(!SDOK)  return noCardError(Cmdr);
+  if(!SDOK)  return noFsError(Cmdr);
   if(SD.mkdir( Cmdr.getPayloadString().c_str() )){
     Cmdr.print("Created: ");
     Cmdr.println(Cmdr.getPayloadString());
@@ -259,7 +259,7 @@ bool makeDirectory(Commander &Cmdr){
 //-----------------------------------------------------------------------------------------------
 
 bool removeFile(Commander &Cmdr){
-  if(!SDOK)  return noCardError(Cmdr);
+  if(!SDOK)  return noFsError(Cmdr);
 	closeFiles();
   if(SD.remove( Cmdr.getPayloadString().c_str())){
     Cmdr.print("Removed: ");
@@ -271,7 +271,7 @@ bool removeFile(Commander &Cmdr){
 }
 //-----------------------------------------------------------------------------------------------
 bool removeDirectory(Commander &Cmdr){
-  if(!SDOK)  return noCardError(Cmdr);
+  if(!SDOK)  return noFsError(Cmdr);
   if(SD.rmdir( Cmdr.getPayloadString().c_str())){
     Cmdr.print("Removed: ");
     Cmdr.println(Cmdr.getPayloadString());
@@ -282,7 +282,7 @@ bool removeDirectory(Commander &Cmdr){
 }
 //-----------------------------------------------------------------------------------------------
 bool renameFile(Commander &Cmdr){
-  if(!SDOK)  return noCardError(Cmdr);
+  if(!SDOK)  return noFsError(Cmdr);
 	closeFiles();
   String pld = Cmdr.getPayloadString(); //get the payload without any newline
   int idx = pld.indexOf(" "); //find the first space

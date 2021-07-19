@@ -15,7 +15,7 @@ bool myFunc(Commander &Cmdr){
 
 //These are the command handlers, there needs to be one for each command in the command array myCommands[]
 //The command array can have multiple commands strings that all call the same function
-bool sdStatusHandler(Commander &Cmdr){
+bool fsStatusHandler(Commander &Cmdr){
   if(!myNavigator.isFilesystemOk()){
     Cmdr.println("No SD Card");
   }else{
@@ -52,7 +52,7 @@ bool sdFileHandler(Commander &Cmdr){
 //COMMAND ARRAY ------------------------------------------------------------------------------
 
 const commandList_t masterCommands[] = {
-  {"status", sdStatusHandler, "Check SD Card status"},
+  {"status", fsStatusHandler, "Check Filesystem status"},
   {"SD", sdFileHandler, "Open SD explorer"},
 };
 

@@ -9,32 +9,39 @@
  *  This can be sent from a terminal application such as coolTerm by pressing CONTROL+D
  *  The Arduino Serial terminal does NOT allow you to send this character and so you cannot terminate the file download when using the Arduino Serial terminal.
  */
-#include <Commander.h>
 
-#include <SD.h>
+#define USE_SD 1
+#define USE_LITTLEFS 0
+#include <Commander.h>
 Commander cmd;
 
 #include "PrefabFileNavigatorFS.h"
 
-//FileNavigator myNavigator(SD, "SD:", SerialUSB1);
-FileNavigator myNavigator(SD, "SD:");
+#if (USE_SD == 1)
+  #include <SD.h>
+  FileNavigator myNavigator(SD, "SD:");
+  //FileNavigator myNavigator(SD, "SD:", Serial2); // optionally include Stream in third argument to enable debug output
+  const int cardSelect = 4;
+#endif
+
+#if (USE_LITTLEFS == 1)
+  #include <LITTLEFS.h>
+  FileNavigator myNavigatorLF(LITTLEFS, "LF:");
+  //FileNavigator myNavigatorLF(LITTLEFS, "LF:", Serial2); // optionally include Stream in third argument to enable debug output
+#endif
 
 //String for the top level commander prompt
 String prompt = "CMD";
 
 #include "Commands.h"
 
-//SPI Chip select pin
-const int cardSelect = BUILTIN_SDCARD;
-
 void setup() {
   Serial.begin(115200);
   while(!Serial){yield();} //Wait for the serial port to open before running the example
   Serial.println("Commander prefab File navigator Example");
 
-  SerialUSB1.begin(115200);
-  SerialUSB1.println("(Debug) FatFs Command Line Interpreter");
 
+#if (USE_SD == 1)
   myNavigator.setup();
 
   //See if an SD card is inserted
@@ -44,12 +51,29 @@ void setup() {
     myNavigator.setFilesystemOk(true);
     Serial.println("SDCard Started");
   }
+#endif
+
+#if (USE_LITTLEFS == 1)
+  myNavigatorLF.setup();
+
+  if(!LITTLEFS.begin()) {
+    Serial.println("LittleFS Init Error");
+  }else{
+    myNavigatorLF.setFilesystemOk(true);
+    Serial.println("LittleFS Started");
+  }
+#endif
 
   Serial.println("Starting Commander ... type help to see a command list");
 
   //tell the SD prefab what the top layer command list is called and how large it is, prompt);
   masterCollection.setList(masterCommands, sizeof(masterCommands), prompt);
+#if (USE_SD == 1)
   myNavigator.setTopLayer(masterCollection);
+#endif
+#if (USE_LITTLEFS == 1)
+  myNavigatorLF.setTopLayer(masterCollection);
+#endif
 
   cmd.endOfLineChar('\r');
   cmd.delimiters("= :,\t\\|"); // use defaults except for '/' which interferes with pathnames including root directory

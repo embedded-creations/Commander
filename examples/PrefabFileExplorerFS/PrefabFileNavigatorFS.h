@@ -77,7 +77,7 @@ class FileNavigator : public CommandCollection {
       Cmdr.echo(false);
       Cmdr.startStreaming();
       XYmodemMode = true;
-      rxymodem.start_rb(Cmdr, *fsptr, true, true);
+      rxymodem.start_rb(Cmdr, *fsptr, cwd, true, true);
 
       return 0; 
     }

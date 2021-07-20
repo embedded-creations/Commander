@@ -9,11 +9,9 @@
 
 class Commander;
 
-
-//const String CommanderVersionNumber = "3.0.0";
 const uint8_t majorVersion = 4;
 const uint8_t minorVersion = 2;
-const uint8_t subVersion   = 0;
+const uint8_t subVersion   = 2;
 
 
 //#define BENCHMARKING_ON
@@ -303,11 +301,19 @@ public:
 			return -1;
 		return bufferString.charAt(0);
 	}
-
-// availableForWrite() is not part of the Stream class on ESP32 (and probably ESP8266)
+	
+	int availableForWrite() {
 #if !defined(ESP8266) && !defined(ESP32)
-	int availableForWrite() { return ports.outPort ? ports.outPort->availableForWrite() : 0; }
+		return ports.outPort ? ports.outPort->availableForWrite() : 0;
+#else
+		// availableForWrite() is not part of the Stream class on ESP32 (and probably ESP8266)
+		return 0;
 #endif
+	}
+	
+	
+
+	//int availableForWrite() { return ports.outPort ? ports.outPort->availableForWrite() : 0; }
 
 	void flush() { if(ports.outPort) ports.outPort->flush(); }
 
@@ -541,7 +547,8 @@ private:
   uint16_t bytesWritten = 0; //overflow check for bytes written into the buffer
 	uint16_t bufferSize = SBUFFER_DEFAULT;
 	uint16_t dataReadIndex = 0; //for parsing many numbers
-	const char* internalCommandArray[INTERNAL_COMMAND_ITEMS];
+	//const char* internalCommandArray[INTERNAL_COMMAND_ITEMS];
+	const char* internalCommandArray[INTERNAL_COMMAND_ITEMS] = { "U", "X", "?", "help", "echo", "echox", "errors"};
 	String *passPhrase = NULL;
 	String *userString = NULL;
 	uint8_t primntDelayTime = 0; //

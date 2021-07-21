@@ -274,11 +274,24 @@ bool Commander::transferTo(const commandList_t *commands, uint32_t size, String 
 	return false;
 }
 //==============================================================================================================
+bool Commander::transferTo(CommandCollection &collection){
+	commandCollection = &collection;
+	return transferTo(collection.listPtr, collection.numCmds, collection.name);
+}
+//==============================================================================================================
 
 Commander& Commander::transferBack(const commandList_t *commands, uint32_t size, String newName){
 	//Transfer command to the new command array
 	attachCommands(commands, size);
 	commanderName = newName;
+	return *this;
+}
+//==============================================================================================================
+Commander& Commander::transferBack(CommandCollection &collection){
+	//Transfer command to the new command array
+	attachCommands(collection.listPtr, collection.numCmds);
+	commanderName = collection.name;
+	commandCollection = &collection;
 	return *this;
 }
 //==============================================================================================================

@@ -13,7 +13,7 @@
 #define USE_SD 1
 #define USE_LITTLEFS 0
 #include <Commander.h>
-#include "PrefabFileNavigatorFS.h"
+#include <prefabs/FileSystem/PrefabFileNavigatorFS.h>
 
 Commander cmd;
 FileNavigatorMainMenu myMainMenu("CMD");

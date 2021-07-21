@@ -219,7 +219,6 @@ class FileNavigator : public CommandCollection {
       return 0;
     }
 
-
     int make_full_pathname(Commander &Cmdr, const char *name, char *pathname, size_t pathname_len)
     {
       if (name == NULL || name == '\0') return -1;

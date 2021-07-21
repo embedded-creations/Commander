@@ -33,12 +33,22 @@ Commander&	Commander::begin(Stream *sPort, const commandList_t *commands, uint32
 	return *this;
 }
 //==============================================================================================================
+Commander&	Commander::begin(Stream *sPort, CommandCollection &collection){
+	commandCollection = &collection;
+	return begin(sPort, collection.listPtr, collection.numCmds*sizeof(commandList_t));
+}
+//==============================================================================================================
 Commander&	Commander::begin(Stream *sPort, Stream *oPort, const commandList_t *commands, uint32_t size){
 	ports.inPort = sPort;
 	ports.outPort = oPort;
 	attachCommands(commands, size);
 	resetBuffer();
 	return *this;
+}
+//==============================================================================================================
+Commander&	Commander::begin(Stream *sPort, Stream *oPort, CommandCollection &collection){
+	commandCollection = &collection;
+	return begin(sPort, oPort, collection.listPtr, collection.numCmds*sizeof(commandList_t));
 }
 //==============================================================================================================
 

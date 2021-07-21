@@ -210,7 +210,9 @@ public:
 	Commander&   begin(Stream *sPort);
 	Commander&	 begin(Stream *sPort, const commandList_t *commands, uint32_t size);
 	Commander&	 begin(Stream *sPort, Stream *oPort, const commandList_t *commands, uint32_t size);
+	Commander&	 begin(Stream *sPort, CommandCollection &collection);
 	Commander&	 begin(const commandList_t *commands, uint32_t size);
+	Commander&	 begin(Stream *sPort, Stream *oPort, CommandCollection &collection);
 	bool   update();
 	Commander&	 setPassPhrase(String& phrase) 	{passPhrase = &phrase; return *this;}
 	Commander&   printPassPhrase() 							{print(*passPhrase); return *this;}

@@ -366,6 +366,39 @@ class FileNavigatorMainMenu : public CommandCollection {
     int numNavigators = 0;
 };
 
+class FileNavigatorCLI {
+  public:
+    FileNavigatorCLI(Stream &port) : myMainMenu("CMD") { this->port = &port; }
+
+    void setup(void) {
+      cmd.endOfLineChar('\r');
+      cmd.stripCR(OFF); // TODO redundant now?
+      // TODO: reload character is '/', what is this?
+      // TODO: why are these not printing out properly?
+      cmd.delimiters("= :,\t\\|"); // use defaults except for '/' which interferes with pathnames including root directory
+      cmd.setStreamingMode(1);
+      cmd.setStreamingMethod(1);
+      cmd.echo(true);
+      cmd.begin(port, myMainMenu);
+      cmd.commandPrompt(ON);
+      cmd.printCommandPrompt();
+    }
+
+    void loop(void) {
+      cmd.update();
+    }
+
+    bool addNavigator(FileNavigator &navigator, String name) {
+      navigator.setTopLayer(myMainMenu);
+      myMainMenu.addNavigator(navigator, name);
+    }
+
+  private:
+    Stream * port;
+    Commander cmd;
+    FileNavigatorMainMenu myMainMenu;
+};
+
 // TODO: migrate more Prefab Methods into FileNavigator
 #if 0
 //These are the command handlers, there needs to be one for each command in the command array myCommands[]

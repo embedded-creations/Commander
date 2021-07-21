@@ -15,9 +15,7 @@
 #include <Commander.h>
 #include <prefabs/FileSystem/PrefabFileNavigatorFS.h>
 
-Commander cmd;
-FileNavigatorMainMenu myMainMenu("CMD");
-
+FileNavigatorCLI myCli(Serial);
 
 #if (USE_SD == 1)
   #include <SD.h>
@@ -47,9 +45,8 @@ void setup() {
     myNavigator.setFilesystemOk(true);
     Serial.println("SDCard Started");
   }
-  //tell the filenavigator prefabs the top layer command collection for when "exit" is used
-  myNavigator.setTopLayer(myMainMenu);
-  myMainMenu.addNavigator(myNavigator, "SD");
+
+  myCli.addNavigator(myNavigator, "SD");
 #endif
 
 #if (USE_LITTLEFS == 1)
@@ -61,24 +58,14 @@ void setup() {
   }
 
   //tell the filenavigator prefabs the top layer command collection for when "exit" is used
-  myNavigatorLF.setTopLayer(myMainMenu);
-  myMainMenu.addNavigator(myNavigatorLF, "LF");
+  myCli.addNavigator(myNavigatorLF, "LF");
 #endif
 
   Serial.println("Starting Commander ... type help to see a command list");
 
-  cmd.endOfLineChar('\r');
-  cmd.delimiters("= :,\t\\|"); // use defaults except for '/' which interferes with pathnames including root directory
-  cmd.stripCR(OFF);
-  cmd.setStreamingMode(1);
-  cmd.setStreamingMethod(1);
-  cmd.echo(true);
-  cmd.begin(&Serial, myMainMenu);
-  cmd.commandPrompt(ON);
-  cmd.commanderName = myMainMenu.name; // TODO: incorporate into begin?
-  cmd.printCommandPrompt();
+  myCli.setup();
 }
 
 void loop() {
-  cmd.update();
+  myCli.loop();
 }

@@ -42,7 +42,7 @@ typedef struct commandList_t{
 class CommandCollection {
   public:
     const commandList_t *listPtr;
-    size_t numCmds;
+    uint32_t numCmds;
     String name = "";
     void setList(const commandList_t *listPtr, size_t numCmds, String name = "") {
     	this->listPtr = listPtr;

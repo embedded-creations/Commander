@@ -15,7 +15,7 @@ class FileNavigator : public CommandCollection {
       fsptr = &fs;
       this->cmdName = cmdName; // TODO: just use CommandCollection.name?
 
-      setList(fileCommands, sizeof(fileCommands), cmdName);
+      setList(fileCommands, sizeof(fileCommands)/sizeof(commandList_t), cmdName);
     }
 
     FileNavigator(FS &fs, String cmdName, Stream &debugport)
@@ -23,7 +23,7 @@ class FileNavigator : public CommandCollection {
       fsptr = &fs;
       this->cmdName = cmdName; // TODO: just use CommandCollection.name?
 
-      setList(fileCommands, sizeof(fileCommands), cmdName);
+      setList(fileCommands, sizeof(fileCommands)/sizeof(commandList_t), cmdName);
     }
 
     void setTopLayer(CommandCollection &topLayer){

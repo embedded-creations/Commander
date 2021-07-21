@@ -19,16 +19,17 @@ float myFloat = 0.0;
 #include "getCommands.h"
 #include "setCommands.h"
 #include "masterCommands.h"
+
 //SETUP ---------------------------------------------------------------------------
 void setup() {
   Serial.begin(115200);
 
-  masterCollection.setList(masterCommands, sizeof(masterCommands), "Cmd");
-  mySetCollection.setList(mySetCollection.setCommands, sizeof(mySetCollection.setCommands), "set");
-  mySetCollection2.setList(mySetCollection2.setCommands, sizeof(mySetCollection2.setCommands), "set2");
-  getCollection.setList(getCommands, sizeof(getCommands), "get");
+  masterCollection.setList(masterCommands, sizeof(masterCommands)/sizeof(commandList_t), "Cmd");
+  mySetCollection.setList(mySetCollection.setCommands, sizeof(mySetCollection.setCommands)/sizeof(commandList_t), "set");
+  mySetCollection2.setList(mySetCollection2.setCommands, sizeof(mySetCollection2.setCommands)/sizeof(commandList_t), "set2");
+  getCollection.setList(getCommands, sizeof(getCommands)/sizeof(commandList_t), "get");
 
-  cmd.begin(&Serial, masterCollection.listPtr, masterCollection.numCmds);
+  cmd.begin(&Serial, masterCollection);
   cmd.commanderName = "Cmd";
   cmd.commandPrompt(ON);
   cmd.echo(true);

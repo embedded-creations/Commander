@@ -13,9 +13,11 @@
 #define USE_SD 1
 #define USE_LITTLEFS 0
 #include <Commander.h>
-Commander cmd;
-
 #include "PrefabFileNavigatorFS.h"
+
+Commander cmd;
+FileNavigatorMainMenu myMainMenu("CMD");
+
 
 #if (USE_SD == 1)
   #include <SD.h>
@@ -30,11 +32,6 @@ Commander cmd;
   //FileNavigator myNavigatorLF(LITTLEFS, "LF:", Serial2); // optionally include Stream in third argument to enable debug output
 #endif
 
-//String for the top level commander prompt
-String prompt = "CMD";
-
-#include "Commands.h"
-
 void setup() {
   Serial.begin(115200);
   while(!Serial){yield();} //Wait for the serial port to open before running the example
@@ -42,7 +39,6 @@ void setup() {
 
 
 #if (USE_SD == 1)
-  myNavigator.setup();
 
   //See if an SD card is inserted
   if(!SD.begin(cardSelect)) {
@@ -51,29 +47,25 @@ void setup() {
     myNavigator.setFilesystemOk(true);
     Serial.println("SDCard Started");
   }
+  //tell the filenavigator prefabs the top layer command collection for when "exit" is used
+  myNavigator.setTopLayer(myMainMenu);
+  myMainMenu.addNavigator(myNavigator, "SD");
 #endif
 
 #if (USE_LITTLEFS == 1)
-  myNavigatorLF.setup();
-
   if(!LITTLEFS.begin()) {
     Serial.println("LittleFS Init Error");
   }else{
     myNavigatorLF.setFilesystemOk(true);
     Serial.println("LittleFS Started");
   }
+
+  //tell the filenavigator prefabs the top layer command collection for when "exit" is used
+  myNavigatorLF.setTopLayer(myMainMenu);
+  myMainMenu.addNavigator(myNavigatorLF, "LF");
 #endif
 
   Serial.println("Starting Commander ... type help to see a command list");
-
-  //tell the SD prefab what the top layer command list is called and how large it is, prompt);
-  masterCollection.setList(masterCommands, sizeof(masterCommands), prompt);
-#if (USE_SD == 1)
-  myNavigator.setTopLayer(masterCollection);
-#endif
-#if (USE_LITTLEFS == 1)
-  myNavigatorLF.setTopLayer(masterCollection);
-#endif
 
   cmd.endOfLineChar('\r');
   cmd.delimiters("= :,\t\\|"); // use defaults except for '/' which interferes with pathnames including root directory
@@ -81,10 +73,9 @@ void setup() {
   cmd.setStreamingMode(1);
   cmd.setStreamingMethod(1);
   cmd.echo(true);
-  cmd.begin(&Serial, &Serial, masterCollection.listPtr, masterCollection.numCmds);
-
+  cmd.begin(&Serial, myMainMenu);
   cmd.commandPrompt(ON);
-  cmd.commanderName = prompt;
+  cmd.commanderName = myMainMenu.name; // TODO: incorporate into begin?
   cmd.printCommandPrompt();
 }
 

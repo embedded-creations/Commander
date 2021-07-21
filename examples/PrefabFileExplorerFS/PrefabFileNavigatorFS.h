@@ -1,6 +1,6 @@
-//Commander prefab: SD file navigator (based on SDfat and fatfscli example from XYmodem library)
-#ifndef PrefabFileNavigatorSD_h
-#define PrefabFileNavigatorSD_h
+//Commander prefab: FS file navigator (based on SDfat and fatfscli example from XYmodem library)
+#ifndef PrefabFileNavigatorFS_h
+#define PrefabFileNavigatorFS_h
 
 #include <Arduino.h>
 #include <string.h>
@@ -14,6 +14,7 @@ class FileNavigator : public CommandCollection {
     FileNavigator(FS &fs, String cmdName) {
       fsptr = &fs;
       this->cmdName = cmdName; // TODO: just use CommandCollection.name?
+      strcpy(cwd, defaultCwd);
 
       setList(fileCommands, sizeof(fileCommands)/sizeof(commandList_t), cmdName);
     }
@@ -22,6 +23,7 @@ class FileNavigator : public CommandCollection {
     : rxymodem(&debugport) {
       fsptr = &fs;
       this->cmdName = cmdName; // TODO: just use CommandCollection.name?
+      strcpy(cwd, defaultCwd);
 
       setList(fileCommands, sizeof(fileCommands)/sizeof(commandList_t), cmdName);
     }
@@ -118,7 +120,6 @@ class FileNavigator : public CommandCollection {
       String dirString = Cmdr.getPayloadString(); // This works in one line without intermediate dirString on Teensy, but not on ESP32
       const char * dirname = dirString.c_str();
 
-
       if (make_full_pathname(Cmdr, dirname, pathname, sizeof(pathname)) != 0)
         return false;
 
@@ -190,7 +191,7 @@ class FileNavigator : public CommandCollection {
         Cmdr.println("Exit not functional");
         return 0;
       }
-      //close any open files ...
+      // TODO: close any open files ...
       Cmdr.println("Closing SD Navigator");
       Cmdr.transferBack(*topLayer);
       return 0;
@@ -248,10 +249,6 @@ class FileNavigator : public CommandCollection {
       return 0;
     }
 
-    void setup() {
-      strcpy(cwd, "/");
-    }
-
     bool isFilesystemOk() {
       return filesystemOK;
     }
@@ -260,14 +257,114 @@ class FileNavigator : public CommandCollection {
       filesystemOK = ok;
     }
 
+    String getName(void) {
+      return cmdName;
+    }
+
   private:
     String cmdName = "";
     CommandCollection *topLayer;
+    const char * defaultCwd = "/";
     char cwd[128+1];     // Current Working Directory
     FS *fsptr;
     bool XYmodemMode = false;
     bool filesystemOK = false;
     XYmodem rxymodem; // TODO: make static?  Can constructor specifying debug port still work?
+};
+
+class FileNavigatorMainMenu : public CommandCollection {
+  public:
+    static const int MAINMENU_MAX_NAVIGATORS = 4;
+    static const int MAINMENU_BUILTIN_COMMANDS = 1;
+
+    FileNavigatorMainMenu(const char * promptString) {
+      mainMenuCommands[0].handler = mainFsStatusHandler;
+      mainMenuCommands[0].commandString = mainFsStatusHandlerCommandString;
+      mainMenuCommands[0].manualString = mainFsStatusHandlerManualString;
+
+      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 0].handler = fsHandler0;
+      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 1].handler = fsHandler1;
+      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 2].handler = fsHandler2;
+      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 3].handler = fsHandler3;
+      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 0].commandString = genericFsCommandString;
+
+      setList(mainMenuCommands, MAINMENU_BUILTIN_COMMANDS, promptString);
+    }
+
+    CC_METHOD(FileNavigatorMainMenu, mainFsStatusHandler, Cmdr) {
+      if(!numNavigators) {
+        Cmdr.println("no filesystems configured");
+        return 0;
+      }
+
+      for(int i=0; i<numNavigators; i++) {
+        Cmdr.print(navigators[i]->name);
+        if(navigators[i]->isFilesystemOk()){
+          Cmdr.println(" mounted");
+        } else {
+          Cmdr.println(" isn't mounted");
+        }        
+      }
+
+      return 0;
+    }
+
+    // these have to be unique handler functions as Commander doesn't pass any other identifiers to the handler
+    CC_METHOD(FileNavigatorMainMenu, fsHandler0, Cmdr) { return switchToNavigator(Cmdr, 0); }
+    CC_METHOD(FileNavigatorMainMenu, fsHandler1, Cmdr) { return switchToNavigator(Cmdr, 1); }
+    CC_METHOD(FileNavigatorMainMenu, fsHandler2, Cmdr) { return switchToNavigator(Cmdr, 2); }
+    CC_METHOD(FileNavigatorMainMenu, fsHandler3, Cmdr) { return switchToNavigator(Cmdr, 3); }
+
+    bool switchToNavigator(Commander &Cmdr, int index) {
+      if(!navigators[index]->isFilesystemOk()){
+        Cmdr.print(navigators[index]->name);
+        Cmdr.println(" isn't mounted");
+        return 0;
+      }
+      //For the moment - block commands if they are chained
+      if(Cmdr.hasPayload()){
+        Cmdr.println("Chained commands are disabled");
+        //This is blocking when using coolterm ...?
+        return 0;
+      }
+      Cmdr.print("Opening Navigator for ");
+      Cmdr.println(navigators[index]->name);
+
+      if(Cmdr.transferTo(*navigators[index])) {
+        //commander returns true if it is passing back control;
+        Cmdr.transferBack(*this);
+      }
+      return 0;
+    }
+
+    // returns 1 on success, 0 on failure
+    bool addNavigator(FileNavigator &navigator, String name) {
+      if(numNavigators >= MAINMENU_MAX_NAVIGATORS)
+        return 0;
+
+      navigators[numNavigators] = &navigator;
+      navigatorStrings[numNavigators] = name;
+
+      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + numNavigators].commandString = navigatorStrings[numNavigators].c_str();
+      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + numNavigators].manualString = genericFsManualString;
+
+      numNavigators++;
+      numCmds = MAINMENU_BUILTIN_COMMANDS + numNavigators;
+
+      return 1;
+    }
+
+    commandList_t mainMenuCommands[MAINMENU_MAX_NAVIGATORS + MAINMENU_BUILTIN_COMMANDS];
+
+  private:
+    const char* mainFsStatusHandlerManualString = "Check Filesystem status";
+    const char* mainFsStatusHandlerCommandString = "status";
+    const char* genericFsManualString = "Switch to this filesystem";
+    const char* genericFsCommandString = "filesystem";
+
+    FileNavigator * navigators[MAINMENU_MAX_NAVIGATORS];
+    String navigatorStrings[MAINMENU_MAX_NAVIGATORS];
+    int numNavigators = 0;
 };
 
 // TODO: migrate more Prefab Methods into FileNavigator
@@ -374,4 +471,4 @@ bool streamToFileHandler(Commander &Cmdr){
 
 #endif
 
-#endif //PrefabFileNavigator_h
+#endif //PrefabFileNavigatorFS_h

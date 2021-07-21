@@ -33,6 +33,7 @@ Commander&	Commander::begin(Stream *sPort, const commandList_t *commands, uint32
 //==============================================================================================================
 Commander&	Commander::begin(Stream *sPort, CommandCollection &collection){
 	commandCollection = &collection;
+	commanderName = collection.name;
 	return begin(sPort, collection.listPtr, collection.numCmds*sizeof(commandList_t));
 }
 //==============================================================================================================
@@ -46,6 +47,7 @@ Commander&	Commander::begin(Stream *sPort, Stream *oPort, const commandList_t *c
 //==============================================================================================================
 Commander&	Commander::begin(Stream *sPort, Stream *oPort, CommandCollection &collection){
 	commandCollection = &collection;
+	commanderName = collection.name;
 	return begin(sPort, oPort, collection.listPtr, collection.numCmds*sizeof(commandList_t));
 }
 //==============================================================================================================

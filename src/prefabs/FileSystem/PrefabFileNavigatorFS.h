@@ -281,10 +281,10 @@ class FileNavigatorMainMenu : public CommandCollection {
       mainMenuCommands[0].commandString = mainFsStatusHandlerCommandString;
       mainMenuCommands[0].manualString = mainFsStatusHandlerManualString;
 
-      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 0].handler = fsHandler0;
-      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 1].handler = fsHandler1;
-      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 2].handler = fsHandler2;
-      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 3].handler = fsHandler3;
+      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 0].handler = switchToNavigator;
+      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 1].handler = switchToNavigator;
+      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 2].handler = switchToNavigator;
+      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 3].handler = switchToNavigator;
       mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 0].commandString = genericFsCommandString;
 
       setList(mainMenuCommands, MAINMENU_BUILTIN_COMMANDS, promptString);
@@ -308,13 +308,12 @@ class FileNavigatorMainMenu : public CommandCollection {
       return 0;
     }
 
-    // these have to be unique handler functions as Commander doesn't pass any other identifiers to the handler
-    CC_METHOD(FileNavigatorMainMenu, fsHandler0, Cmdr) { return switchToNavigator(Cmdr, 0); }
-    CC_METHOD(FileNavigatorMainMenu, fsHandler1, Cmdr) { return switchToNavigator(Cmdr, 1); }
-    CC_METHOD(FileNavigatorMainMenu, fsHandler2, Cmdr) { return switchToNavigator(Cmdr, 2); }
-    CC_METHOD(FileNavigatorMainMenu, fsHandler3, Cmdr) { return switchToNavigator(Cmdr, 3); }
-
-    bool switchToNavigator(Commander &Cmdr, int index) {
+    CC_METHOD(FileNavigatorMainMenu, switchToNavigator, Cmdr) { 
+      int index = Cmdr.getCommandIndex() - MAINMENU_BUILTIN_COMMANDS;
+      if(index > numNavigators) {
+        Cmdr.println("Invalid index");
+        return 0;
+      }
       if(!navigators[index]->isFilesystemOk()){
         Cmdr.print(navigators[index]->name);
         Cmdr.println(" isn't mounted");
@@ -390,7 +389,7 @@ class FileNavigatorCLI {
 
     bool addNavigator(FileNavigator &navigator, String name) {
       navigator.setTopLayer(myMainMenu);
-      myMainMenu.addNavigator(navigator, name);
+      return myMainMenu.addNavigator(navigator, name);
     }
 
   private:

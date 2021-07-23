@@ -270,6 +270,8 @@ bool Commander::transferTo(const commandList_t *commands, uint32_t size, String 
 	//Transfer command to the new command array
 	attachCommands(commands, size);
 	commanderName = newName;
+	commandCollection = NULL;
+
 	if( hasPayload() ){
     //Serial.println("handing payload to get command list");
 		//bufferString = bufferString.substring(Cmdr.endIndexOfLastCommand+1);
@@ -285,20 +287,39 @@ bool Commander::transferTo(const commandList_t *commands, uint32_t size, String 
 }
 //==============================================================================================================
 bool Commander::transferTo(CommandCollection &collection){
-	CommandCollection * backPtr = commandCollection;
+	collection.transferBackPtr = commandCollection;
 	commandCollection = &collection;
-	commandCollection->transferBackPtr = backPtr;
 
 	if(collection.entryHandler(*this))
 		return true;
 
-	return transferTo(collection.listPtr, collection.numCmds*sizeof(commandList_t), collection.name);
+	// TOOD: come up with a cleaner way to share code between these two methods?
+	// The below is nearly the same as transferTo(const commandList_t *commands, uint32_t size, String newName), except commandCollection isn't set to NULL
+	// if transferTo(const commandList_t *commands, ...) is called directly it should set commandCollection to NULL.  If called from here it shouldn't: return transferTo(collection.listPtr, collection.numCmds*sizeof(commandList_t), collection.name);
+
+	//Transfer command to the new command array
+	attachCommands(collection.listPtr, collection.numCmds*sizeof(commandList_t));
+	commanderName = collection.name;
+
+	if( hasPayload() ){
+    //Serial.println("handing payload to get command list");
+		//bufferString = bufferString.substring(Cmdr.endIndexOfLastCommand+1);
+		bufferString.remove(0, endIndexOfLastCommand+1);
+		//Serial.print(bufferString);
+		//keep this command prompt disabled if it wasn't already
+		commandPrompt(OFF); //dsiable the prompt so it doesn't print twice
+		commandState.bit.commandHandled = !handleCommand(); //try and handle the command
+		if( ports.settings.bit.multiCommanderMode == false ) commandPrompt(ON); //re-enable the prompt if in single commander mode so it prints on exit
+		return true;
+  	}
+	return false;
 }
 //==============================================================================================================
 Commander& Commander::transferBack(const commandList_t *commands, uint32_t size, String newName){
 	//Transfer command to the new command array
 	attachCommands(commands, size);
 	commanderName = newName;
+	commandCollection = NULL;
 	return *this;
 }
 //==============================================================================================================
@@ -312,7 +333,7 @@ Commander& Commander::transferBack(CommandCollection &collection){
 //==============================================================================================================
 Commander& Commander::transferBack(void){
 	//Transfer command to the new command array
-	if(!commandCollection->transferBackPtr) {
+	if(!commandCollection || !commandCollection->transferBackPtr) {
 		println("Exit not functional");
 	} else {
 		commandCollection = commandCollection->transferBackPtr;

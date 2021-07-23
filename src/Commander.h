@@ -48,6 +48,7 @@ class CommandCollection {
     String name = "";
     CommandCollection * transferBackPtr = NULL;
     virtual bool entryHandler(Commander& Cmdr) { return 0; }
+    virtual bool exitHandler(Commander& Cmdr) { return 0; } // TODO: automatically render "exit" menu entry.  (Should we care what exitHandler returns?  Is there a reason we might want to not exit depending on what exitHandler returns? e.g. the menu is in the middle of an uninterruptable sequence?)
     void setList(const commandList_t *listPtr, size_t numCmds, String name = "") {
     	this->listPtr = listPtr;
     	this->numCmds = numCmds;

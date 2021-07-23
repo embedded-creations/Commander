@@ -57,7 +57,7 @@ class FileNavigator : public CommandCollection {
       //{"write", writeToFileHandler, "Create file and open for writing - Send ASCII code 0x04 to terminate"},
       {"status", noFsError, "check filesystem status"},
       {"rb", receiveYmodem, "Start YMODEM Batch Receive"},
-      {"exit", exitHandler, "Exit sub command"}
+      {"exit", exitHandlerMenu, "Exit sub command"} // TODO: remove this after Commander automatically adds exit
     };
 
     CC_METHOD(FileNavigator, noFsError, Cmdr) {
@@ -193,11 +193,15 @@ class FileNavigator : public CommandCollection {
       return 0;
     }
 
-    CC_METHOD(FileNavigator, exitHandler, Cmdr) {
+    bool exitHandler(Commander &Cmdr) {
       // TODO: close any open files ...
       Cmdr.println("Closing Navigator");
-      Cmdr.transferBack();
+      Cmdr.transferBack(); // TODO: remove this as Commander should do this automatically?
       return 0;
+    }
+
+    CC_METHOD(FileNavigator, exitHandlerMenu, Cmdr) {
+      return exitHandler(Cmdr);
     }
 
     CC_METHOD(FileNavigator, makeDirectory, Cmdr) {

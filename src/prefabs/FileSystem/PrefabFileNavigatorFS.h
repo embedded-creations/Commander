@@ -69,6 +69,12 @@ class FileNavigator : public CommandCollection {
     CC_METHOD(FileNavigator, receiveYmodem, Cmdr) {
       if(!filesystemOK)  return noFsError(Cmdr);
 
+      if(Cmdr.hasPayload()){
+        Cmdr.println("YMODEM receive doesn't work with a chained command");
+        //This is blocking when using coolterm ...?
+        return 0;
+      }
+
       Cmdr.attachSpecialHandler(receiveYmodemLoop);
       // TODO: clear buffer before streaming?
       // TODO: store echo setting and restore, instead of assuming it should be on?
@@ -321,13 +327,6 @@ class DynamicMenu : public CommandCollection {
 
       if(subMenuList[index] == NULL) {
         Cmdr.println("Invalid submenu");
-        return 0;
-      }
-      //For the moment - block commands if they are chained
-
-      if(Cmdr.hasPayload()){
-        Cmdr.println("Chained commands are disabled");
-        //This is blocking when using coolterm ...?
         return 0;
       }
 

@@ -28,10 +28,6 @@ class FileNavigator : public CommandCollection {
       setList(fileCommands, sizeof(fileCommands)/sizeof(commandList_t), cmdName);
     }
 
-    void setTopLayer(CommandCollection &topLayer){
-      this->topLayer = &topLayer;
-    }
-
     CC_METHOD(FileNavigator, receiveYmodemLoop, Cmdr) {
       if (XYmodemMode){
         // TODO:   if(Cmdr.isStreaming() == false){ //clean up close any open file } // are we guaranteed to receive one last call after isStreaming is set to false?
@@ -186,14 +182,21 @@ class FileNavigator : public CommandCollection {
       return 0;
     }
 
-    CC_METHOD(FileNavigator, exitHandler, Cmdr) {
-      if(topLayer == NULL){
-        Cmdr.println("Exit not functional");
-        return 0;
+    bool entryHandler(Commander &Cmdr) {
+      if(!isFilesystemOk()){
+        Cmdr.print(name);
+        Cmdr.println(" isn't mounted");
+        return 1;
       }
+      Cmdr.print("Opening Navigator for ");
+      Cmdr.println(name);
+      return 0;
+    }
+
+    CC_METHOD(FileNavigator, exitHandler, Cmdr) {
       // TODO: close any open files ...
-      Cmdr.println("Closing SD Navigator");
-      Cmdr.transferBack(*topLayer);
+      Cmdr.println("Closing Navigator");
+      Cmdr.transferBack();
       return 0;
     }
 
@@ -262,7 +265,6 @@ class FileNavigator : public CommandCollection {
 
   private:
     String cmdName = "";
-    CommandCollection *topLayer;
     const char * defaultCwd = "/";
     char cwd[128+1];     // Current Working Directory
     FS *fsptr;
@@ -271,25 +273,98 @@ class FileNavigator : public CommandCollection {
     XYmodem rxymodem; // TODO: make static?  Can constructor specifying debug port still work?
 };
 
-class FileNavigatorMainMenu : public CommandCollection {
+class DynamicMenu : public CommandCollection {
+  public:
+    DynamicMenu(int maxEntries, const char * promptString) : maxEntries(maxEntries) {
+      menuList = (commandList_t *)malloc(sizeof(commandList_t*) * maxEntries);
+      setList(menuList, 0, promptString);
+
+      subMenuList = (CommandCollection **)malloc(sizeof(CommandCollection*) * maxEntries);
+      memset(subMenuList, 0x00, sizeof(CommandCollection*) * maxEntries);
+    }
+
+    const int maxEntries;
+
+    commandList_t * menuList;
+
+    bool addCommand(cmdHandler handler, const char* commandString, const char* manualString) {
+      if(numEntries >= maxEntries)
+        return 0;
+
+      menuList[numEntries].handler = handler;
+      menuList[numEntries].commandString = commandString;
+      menuList[numEntries].manualString = manualString;
+      numEntries++;
+      numCmds++;
+      return 1;
+    }
+
+    bool addSubMenu(CommandCollection &menu, const char* commandString, const char* manualString) {
+      if(numEntries >= maxEntries)
+        return 0;
+
+      subMenuList[numEntries] = &menu;
+      addCommand(switchToSubMenu, commandString, manualString);
+      return 1;
+    }
+
+    CC_METHOD(DynamicMenu, switchToSubMenu, Cmdr) {
+      int index = Cmdr.getCommandIndex();
+      if(index > numEntries) {
+        Cmdr.println("Invalid index");
+        return 0;
+      }
+
+      if(subMenuList[index] == NULL) {
+        Cmdr.println("Invalid submenu");
+        return 0;
+      }
+      //For the moment - block commands if they are chained
+
+      if(Cmdr.hasPayload()){
+        Cmdr.println("Chained commands are disabled");
+        //This is blocking when using coolterm ...?
+        return 0;
+      }
+
+      if(Cmdr.transferTo(*subMenuList[index])) {
+        //commander returns true if it is passing back control;
+        Cmdr.transferBack(*this);
+      }
+      return 0;
+    }
+
+  protected:
+    CommandCollection ** subMenuList;
+
+  private:
+    int numEntries; // TODO: just use numCmds?
+};
+
+class FileNavigatorMainMenu : public DynamicMenu {
   public:
     static const int MAINMENU_MAX_NAVIGATORS = 4;
     static const int MAINMENU_BUILTIN_COMMANDS = 1;
 
-    FileNavigatorMainMenu(const char * promptString) {
-      mainMenuCommands[0].handler = mainFsStatusHandler;
-      mainMenuCommands[0].commandString = mainFsStatusHandlerCommandString;
-      mainMenuCommands[0].manualString = mainFsStatusHandlerManualString;
-
-      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 0].handler = switchToNavigator;
-      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 1].handler = switchToNavigator;
-      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 2].handler = switchToNavigator;
-      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 3].handler = switchToNavigator;
-      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + 0].commandString = genericFsCommandString;
-
-      setList(mainMenuCommands, MAINMENU_BUILTIN_COMMANDS, promptString);
+    FileNavigatorMainMenu(const char * promptString) :
+    DynamicMenu(MAINMENU_MAX_NAVIGATORS + MAINMENU_BUILTIN_COMMANDS, promptString) {
+      addCommand(mainFsStatusHandler, mainFsStatusHandlerCommandString, mainFsStatusHandlerManualString);
     }
 
+    // returns 1 on success, 0 on failure
+    bool addNavigator(FileNavigator &navigator, String name) {
+      if(numNavigators >= MAINMENU_MAX_NAVIGATORS)
+        return 0;
+
+      navigatorStrings[numNavigators] = name;
+      addSubMenu(navigator, navigatorStrings[numNavigators].c_str(), genericFsManualString);
+      numNavigators++;
+      numCmds = MAINMENU_BUILTIN_COMMANDS + numNavigators;
+
+      return 1;
+    }
+
+    // TODO: this could break if someone uses addSubMenu to add a non-FileNavigator item to the menu, should there be a check that there's actually a FileNavigator here (add a switchToFileNavigator() method and check the pointer?)
     CC_METHOD(FileNavigatorMainMenu, mainFsStatusHandler, Cmdr) {
       if(!numNavigators) {
         Cmdr.println("no filesystems configured");
@@ -297,8 +372,8 @@ class FileNavigatorMainMenu : public CommandCollection {
       }
 
       for(int i=0; i<numNavigators; i++) {
-        Cmdr.print(navigators[i]->name);
-        if(navigators[i]->isFilesystemOk()){
+        Cmdr.print(subMenuList[i + MAINMENU_BUILTIN_COMMANDS]->name);
+        if(((FileNavigator*)subMenuList[i + MAINMENU_BUILTIN_COMMANDS])->isFilesystemOk()){
           Cmdr.println(" mounted");
         } else {
           Cmdr.println(" isn't mounted");
@@ -308,59 +383,11 @@ class FileNavigatorMainMenu : public CommandCollection {
       return 0;
     }
 
-    CC_METHOD(FileNavigatorMainMenu, switchToNavigator, Cmdr) { 
-      int index = Cmdr.getCommandIndex() - MAINMENU_BUILTIN_COMMANDS;
-      if(index > numNavigators) {
-        Cmdr.println("Invalid index");
-        return 0;
-      }
-      if(!navigators[index]->isFilesystemOk()){
-        Cmdr.print(navigators[index]->name);
-        Cmdr.println(" isn't mounted");
-        return 0;
-      }
-      //For the moment - block commands if they are chained
-      if(Cmdr.hasPayload()){
-        Cmdr.println("Chained commands are disabled");
-        //This is blocking when using coolterm ...?
-        return 0;
-      }
-      Cmdr.print("Opening Navigator for ");
-      Cmdr.println(navigators[index]->name);
-
-      if(Cmdr.transferTo(*navigators[index])) {
-        //commander returns true if it is passing back control;
-        Cmdr.transferBack(*this);
-      }
-      return 0;
-    }
-
-    // returns 1 on success, 0 on failure
-    bool addNavigator(FileNavigator &navigator, String name) {
-      if(numNavigators >= MAINMENU_MAX_NAVIGATORS)
-        return 0;
-
-      navigators[numNavigators] = &navigator;
-      navigatorStrings[numNavigators] = name;
-
-      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + numNavigators].commandString = navigatorStrings[numNavigators].c_str();
-      mainMenuCommands[MAINMENU_BUILTIN_COMMANDS + numNavigators].manualString = genericFsManualString;
-
-      numNavigators++;
-      numCmds = MAINMENU_BUILTIN_COMMANDS + numNavigators;
-
-      return 1;
-    }
-
-    commandList_t mainMenuCommands[MAINMENU_MAX_NAVIGATORS + MAINMENU_BUILTIN_COMMANDS];
-
   private:
-    const char* mainFsStatusHandlerManualString = "Check Filesystem status";
     const char* mainFsStatusHandlerCommandString = "status";
+    const char* mainFsStatusHandlerManualString = "Check Filesystem status";
     const char* genericFsManualString = "Switch to this filesystem";
-    const char* genericFsCommandString = "filesystem";
 
-    FileNavigator * navigators[MAINMENU_MAX_NAVIGATORS];
     String navigatorStrings[MAINMENU_MAX_NAVIGATORS];
     int numNavigators = 0;
 };
@@ -388,7 +415,6 @@ class FileNavigatorCLI {
     }
 
     bool addNavigator(FileNavigator &navigator, String name) {
-      navigator.setTopLayer(myMainMenu);
       return myMainMenu.addNavigator(navigator, name);
     }
 

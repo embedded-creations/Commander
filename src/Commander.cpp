@@ -285,11 +285,16 @@ bool Commander::transferTo(const commandList_t *commands, uint32_t size, String 
 }
 //==============================================================================================================
 bool Commander::transferTo(CommandCollection &collection){
+	CommandCollection * backPtr = commandCollection;
 	commandCollection = &collection;
+	commandCollection->transferBackPtr = backPtr;
+
+	if(collection.entryHandler(*this))
+		return true;
+
 	return transferTo(collection.listPtr, collection.numCmds*sizeof(commandList_t), collection.name);
 }
 //==============================================================================================================
-
 Commander& Commander::transferBack(const commandList_t *commands, uint32_t size, String newName){
 	//Transfer command to the new command array
 	attachCommands(commands, size);
@@ -302,6 +307,18 @@ Commander& Commander::transferBack(CommandCollection &collection){
 	attachCommands(collection.listPtr, collection.numCmds*sizeof(commandList_t));
 	commanderName = collection.name;
 	commandCollection = &collection;
+	return *this;
+}
+//==============================================================================================================
+Commander& Commander::transferBack(void){
+	//Transfer command to the new command array
+	if(!commandCollection->transferBackPtr) {
+		println("Exit not functional");
+	} else {
+		commandCollection = commandCollection->transferBackPtr;
+		attachCommands(commandCollection->listPtr, commandCollection->numCmds*sizeof(commandList_t));
+		commanderName = commandCollection->name;
+	}
 	return *this;
 }
 //==============================================================================================================

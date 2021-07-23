@@ -39,11 +39,15 @@ typedef struct commandList_t{
 	const char* manualString;
 } commandList_t;
 
+class Commander; // forward declaration needed for CommandCollection::entryHandler()
+
 class CommandCollection {
   public:
     const commandList_t *listPtr;
     uint32_t numCmds;
     String name = "";
+    CommandCollection * transferBackPtr = NULL;
+    virtual bool entryHandler(Commander& Cmdr) { return 0; }
     void setList(const commandList_t *listPtr, size_t numCmds, String name = "") {
     	this->listPtr = listPtr;
     	this->numCmds = numCmds;
@@ -246,6 +250,7 @@ public:
 	Commander&   	transferBack(const commandList_t *commands, uint32_t size, String newName);
 	bool   				transferTo(CommandCollection &collection);
 	Commander&   	transferBack(CommandCollection &collection);
+	Commander&   	transferBack(void);
 	Commander&   	attachOutputPort(Stream *oPort)							{ports.outPort = oPort; return *this;}
 	Stream* 			getOutputPort() 														{return ports.outPort;}
 	Commander&   	attachAltPort(Stream *aPort)								{ports.altPort = aPort; return *this;} 

@@ -6,8 +6,7 @@
 #include <string.h>
 #include <FS.h>
 
-// Depends on forked version of XYmodem library: https://github.com/embedded-creations/XYmodem
-#include <xymodem.h>
+#include <xymodem.h> // Depends on forked version of XYmodem library: https://github.com/embedded-creations/XYmodem
 
 class FileNavigator : public CommandCollection {
   public:
@@ -46,14 +45,16 @@ class FileNavigator : public CommandCollection {
       return 0;
     }
 
-    const commandList_t fileCommands[7] = {
+    // TODO: add DOS-flavored aliases?  Option to use one set or the other?
+    const commandList_t fileCommands[10] = {
       {"mkdir", makeDirectory, "make a sub directory"},
       {"cd", changeDirectory, "Change directory - use / for root"},
       {"ls", printDirectory, "Print directory"},
-      //{"remove", removeFile, "Delete a file"},
-      //{"removedir", removeDirectory, "Delete an empty directory"},
-      //{"rename", renameFile, "rename a file or sub directory"},
-      {"read", readFileContents, "Read file and send to terminal"},
+      {"rm", removeFile, "Delete a file"},
+      {"rmdir", removeDirectory, "Delete an empty directory"},
+      {"rn", renameFile, "rename a file or sub directory"},
+      {"cat", readFileContents, "Read file and send to terminal"},
+      // TODO: implement basic write command
       //{"write", writeToFileHandler, "Create file and open for writing - Send ASCII code 0x04 to terminate"},
       {"status", noFsError, "check filesystem status"},
       {"rb", receiveYmodem, "Start YMODEM Batch Receive"},
@@ -63,6 +64,70 @@ class FileNavigator : public CommandCollection {
     CC_METHOD(FileNavigator, noFsError, Cmdr) {
       if(!filesystemOK) Cmdr.println("ERR: No Filesystem Mounted");
       else  Cmdr.println("Filesystem Mounted");
+      return 0;
+    }
+
+    CC_METHOD(FileNavigator, renameFile, Cmdr) {
+      char pathname1[128+1];
+      char pathname2[128+1];
+
+      if(!filesystemOK)  return noFsError(Cmdr);
+
+      String pld = Cmdr.getPayloadString(); //get the payload without any newline
+      int idx = pld.indexOf(" "); //find the first space
+      if(idx == -1){
+        Cmdr.println("Error, unable to handle command");
+        return 0;
+      }
+      String sub1 = pld.substring(0, idx); //get the first word.
+      String sub2 = pld.substring(idx+1, pld.length());
+      const char * filename1 = sub1.c_str();
+      const char * filename2 = sub2.c_str();
+      if (make_full_pathname(Cmdr, filename1, pathname1, sizeof(pathname1)) != 0) return 0;
+      if (make_full_pathname(Cmdr, filename2, pathname2, sizeof(pathname2)) != 0) return 0;
+      Cmdr.print("Changing ");
+      Cmdr.print(sub1);
+      Cmdr.print(" to ");
+      Cmdr.println(sub2);
+      if(fsptr->rename(pathname1, pathname2)){
+        Cmdr.println("File or directory has been renamed");
+      }else   Cmdr.println("Error: Operation failed");
+      return 0;
+    }
+
+    CC_METHOD(FileNavigator, removeFile, Cmdr) {
+      char pathname[128+1];
+
+      String fileString = Cmdr.getPayloadString(); // This works in one line without intermediate String on Teensy, but not on ESP32
+      const char * filename = fileString.c_str();
+
+      if(!filesystemOK)  return noFsError(Cmdr);
+
+      if (make_full_pathname(Cmdr, filename, pathname, sizeof(pathname)) != 0) return 0;
+      if(fsptr->remove(pathname)){
+        Cmdr.print("Removed: ");
+        Cmdr.println(Cmdr.getPayloadString());
+      }else{
+        Cmdr.println("operation failed");
+      }
+      return 0;
+    }
+
+    CC_METHOD(FileNavigator, removeDirectory, Cmdr) {
+      char pathname[128+1];
+
+      String fileString = Cmdr.getPayloadString(); // This works in one line without intermediate String on Teensy, but not on ESP32
+      const char * filename = fileString.c_str();
+
+      if(!filesystemOK)  return noFsError(Cmdr);
+
+      if (make_full_pathname(Cmdr, filename, pathname, sizeof(pathname)) != 0) return 0;
+      if(fsptr->rmdir(pathname)){
+        Cmdr.print("Removed: ");
+        Cmdr.println(Cmdr.getPayloadString());
+      }else{
+        Cmdr.println("operation failed");
+      }
       return 0;
     }
 
@@ -200,7 +265,7 @@ class FileNavigator : public CommandCollection {
     }
 
     bool exitHandler(Commander &Cmdr) {
-      // TODO: close any open files ...
+      // TODO: close any open files ... maybe from a YMODEM transfer?
       Cmdr.println("Closing Navigator");
       Cmdr.transferBack(); // TODO: remove this as Commander should do this automatically?
       return 0;
@@ -429,63 +494,6 @@ class FileNavigatorCLI {
 
 // TODO: migrate more Prefab Methods into FileNavigator
 #if 0
-//These are the command handlers, there needs to be one for each command in the command array myCommands[]
-//The command array can have multiple commands strings that all call the same function
-bool makeDirectory(Commander &Cmdr){
-  if(!SDOK)  return noFsError(Cmdr);
-  if(SD.mkdir( Cmdr.getPayloadString().c_str() )){
-    Cmdr.print("Created: ");
-    Cmdr.println(Cmdr.getPayloadString());
-  }
-  return 0;
-}
-//-----------------------------------------------------------------------------------------------
-
-bool removeFile(Commander &Cmdr){
-  if(!SDOK)  return noFsError(Cmdr);
-	closeFiles();
-  if(SD.remove( Cmdr.getPayloadString().c_str())){
-    Cmdr.print("Removed: ");
-    Cmdr.println(Cmdr.getPayloadString());
-  }else{
-    Cmdr.println("operation failed");
-  }
-  return 0;
-}
-//-----------------------------------------------------------------------------------------------
-bool removeDirectory(Commander &Cmdr){
-  if(!SDOK)  return noFsError(Cmdr);
-  if(SD.rmdir( Cmdr.getPayloadString().c_str())){
-    Cmdr.print("Removed: ");
-    Cmdr.println(Cmdr.getPayloadString());
-  }else{
-    Cmdr.println("operation failed");
-  }
-  return 0;
-}
-//-----------------------------------------------------------------------------------------------
-bool renameFile(Commander &Cmdr){
-  if(!SDOK)  return noFsError(Cmdr);
-	closeFiles();
-  String pld = Cmdr.getPayloadString(); //get the payload without any newline
-  int idx = pld.indexOf(" "); //find the first space
-  if(idx == -1){
-    Cmdr.println("Error, unable to handle command");
-    return 0;
-  }
-  String sub1 = pld.substring(0, idx); //get the first word.
-  String sub2 = pld.substring(idx+1, pld.length());
-  Cmdr.print("Changing ");
-  Cmdr.print(sub1);
-  Cmdr.print(" to ");
-  Cmdr.println(sub2);
-  if(SD.rename(sub1.c_str(), sub2.c_str())){
-    Cmdr.println("File or directory has been renamed");
-  }else   Cmdr.println("Error: Operation failed");
-  return 0;
-}
-//-----------------------------------------------------------------------------------------------
-
 //-----------------------------------------------------------------------------------------------
 bool writeToFileHandler(Commander &Cmdr){
 	/* Open a file and write data to it.
